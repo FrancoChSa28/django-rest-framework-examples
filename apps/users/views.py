@@ -8,6 +8,7 @@ from rest_framework.views import APIView
 from rest_framework.authtoken.models import Token
 from rest_framework.reverse import reverse
 from rest_framework.pagination import PageNumberPagination
+
 # Create your views here.
 
 # Create user
@@ -38,6 +39,8 @@ class CreateUserView(CreateAPIView):
 
 # Activate user
 class ActivateUser(APIView):
+    permission_classes = [permissions.AllowAny]
+
     def get(self, request, *args, **kwargs):
         # Get token
         token = kwargs.get('token')
@@ -62,3 +65,48 @@ class UserViewSet(viewsets.ModelViewSet):
         permissions.IsAuthenticatedOrReadOnly,
     ]
     pagination_class = PageNumberPagination
+
+# Retrieve token
+class RetrieveToken(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        # Get username and password
+        username = request.data.get('username')
+        password = request.data.get('password')
+        # Search for user
+        user = User.objects.filter(username=username).first()
+        if not user:
+            raise exceptions.AuthenticationFailed('User not found')
+        if not user.check_password(password):
+            raise exceptions.AuthenticationFailed('Incorrect password')
+        if not user.is_active:
+            raise exceptions.AuthenticationFailed('User is not active')
+        # Get token
+        token, _ = Token.objects.get_or_create(user=user)
+        return Response(
+            data={
+                'token': token.key
+            },
+            status=status.HTTP_200_OK
+        )
+
+class ResetPassword(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        # Get user
+        user = request.user
+        # Get password
+        password = request.data.get('password')
+        if not user.check_password(password):
+            raise exceptions.AuthenticationFailed('Incorrect password')
+        # Get new password
+        new_password = request.data.get('new_password')
+        user.set_password(new_password)
+        user.save()
+        return Response(
+            data={
+                'message': 'Password updated'
+            },
+            status=status.HTTP_200_OK)
