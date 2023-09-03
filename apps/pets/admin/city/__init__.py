@@ -1,0 +1,2 @@
+from .admin import CityAdmin
+
