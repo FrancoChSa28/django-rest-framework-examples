@@ -152,6 +152,13 @@ class TagViewSet(GenericViewSet,  # generic view functionality
     queryset = Tag.objects.all()
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
+    # Override the destroy method to set the status to 0
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.active = False
+        instance.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
 ####################################
 #########  Pets Views  #############
 ####################################
